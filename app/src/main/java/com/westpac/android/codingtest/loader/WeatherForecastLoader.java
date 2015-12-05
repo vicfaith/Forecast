@@ -47,7 +47,7 @@ public class WeatherForecastLoader extends AsyncTaskLoader<AsyncTaskResult<Weath
         return result;
     }
 
-    private WeatherForecast parseJson(String json) throws JSONException {
+    public WeatherForecast parseJson(String json) throws JSONException {
         WeatherForecast weatherForecast = new WeatherForecast();
 
         JSONObject jsonObject = new JSONObject(json);
