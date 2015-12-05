@@ -7,7 +7,9 @@ import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.Loader;
+import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -17,9 +19,14 @@ import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
+import com.westpac.android.codingtest.R;
+import com.westpac.android.codingtest.adapter.WeatherForecastAdapter;
 import com.westpac.android.codingtest.loader.WeatherForecastLoader;
 import com.westpac.android.codingtest.models.AsyncTaskResult;
 import com.westpac.android.codingtest.models.WeatherForecast;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by dkang on 3/12/15.
@@ -29,6 +36,7 @@ public class WeatherFragment extends Fragment implements LoaderManager.LoaderCal
     private static final String API_KEY = "59926891c212be1eb69cb852853cd850";
 
     private RecyclerView mRecyclerView;
+    private WeatherForecastAdapter mAdapter;
 
     protected GoogleApiClient mGoogleApiClient;
     protected LocationRequest mLocationRequest;
@@ -53,12 +61,20 @@ public class WeatherFragment extends Fragment implements LoaderManager.LoaderCal
     @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        return super.onCreateView(inflater, container, savedInstanceState);
+        return inflater.inflate(R.layout.activity_fragment, container, false);
     }
 
     @Override
     public void onViewCreated(View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+        setupRecyclerView(view);
+    }
+
+    protected void setupRecyclerView(View rootView) {
+        mRecyclerView = (RecyclerView) rootView.findViewById(R.id.recylerView);
+        mRecyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));
+        mAdapter = new WeatherForecastAdapter(getActivity());
+        mRecyclerView.setAdapter(mAdapter);
     }
 
     @Override
@@ -120,7 +136,17 @@ public class WeatherFragment extends Fragment implements LoaderManager.LoaderCal
     }
 
     private void showForecast(WeatherForecast forecast) {
+        List<WeatherForecastAdapter.IForecast> arrayList = new ArrayList<>();
+        if (forecast != null) {
+            arrayList.add(new WeatherForecastAdapter.ForecastHeaderItem(forecast));
+        }
 
+        // just show daily forecast for this code test app
+        for (WeatherForecast.Forecast item : forecast.getDaily().getData()) {
+            arrayList.add(new WeatherForecastAdapter.ForecastSimpleItem(item));
+        }
+        mAdapter.clear();
+        mAdapter.addAll(arrayList);
     }
 
     private void showError(Throwable e) {
@@ -132,6 +158,7 @@ public class WeatherFragment extends Fragment implements LoaderManager.LoaderCal
     public Loader<AsyncTaskResult<WeatherForecast>> onCreateLoader(int id, Bundle args) {
         Location location = args.getParcelable("location");
         String url = BASE_URL + API_KEY + "/" + location.getLatitude() + "," + location.getLongitude();
+        Log.i(WeatherFragment.class.getSimpleName(), url);
         return new WeatherForecastLoader(getActivity(), url);
     }
 

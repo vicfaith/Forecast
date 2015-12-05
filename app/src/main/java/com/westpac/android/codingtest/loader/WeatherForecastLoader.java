@@ -71,6 +71,7 @@ public class WeatherForecastLoader extends AsyncTaskLoader<AsyncTaskResult<Weath
 
         WeatherForecast.HourlyForecast hourlyForecast = new WeatherForecast.HourlyForecast();
         JSONObject hourlyObject = jsonObject.getJSONObject("hourly");
+        hourlyForecast.setSummary(hourlyObject.getString("summary"));
         JSONArray hourlyArray = hourlyObject.getJSONArray("data");
 
         ArrayList<WeatherForecast.Forecast> forecastList = new ArrayList<>();
@@ -95,6 +96,32 @@ public class WeatherForecastLoader extends AsyncTaskLoader<AsyncTaskResult<Weath
         }
         hourlyForecast.setData(forecastList);
         weatherForecast.setHourly(hourlyForecast);
+
+        WeatherForecast.DailyForecast dailyForecast = new WeatherForecast.DailyForecast();
+        JSONObject dailyObject = jsonObject.getJSONObject("daily");
+        dailyForecast.setSummary(dailyObject.getString("summary"));
+        JSONArray dailyArray = dailyObject.getJSONArray("data");
+
+        forecastList = new ArrayList<>();
+        for (int i = 0; i < dailyArray.length(); i++) {
+            JSONObject item = (JSONObject) dailyArray.get(i);
+            WeatherForecast.Forecast forecast = new WeatherForecast.Forecast();
+            forecast.setTime(item.getInt("time"));
+            forecast.setSummary(item.getString("summary"));
+            forecast.setIcon(item.getString("icon"));
+            forecast.setPrecipProbability(item.getInt("precipIntensity"));
+            forecast.setPrecipIntensity(item.getInt("precipProbability"));
+            forecast.setDewPoint(item.getDouble("dewPoint"));
+            forecast.setHumidity(item.getDouble("humidity"));
+            forecast.setWindSpeed(item.getDouble("windSpeed"));
+            forecast.setWindBearing(item.getDouble("windBearing"));
+            forecast.setCloudCover(item.getDouble("cloudCover"));
+            forecast.setPressure(item.getDouble("pressure"));
+            forecast.setOzone(item.getDouble("ozone"));
+            forecastList.add(forecast);
+        }
+        dailyForecast.setData(forecastList);
+        weatherForecast.setDaily(dailyForecast);
 
         return weatherForecast;
     }

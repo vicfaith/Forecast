@@ -12,6 +12,11 @@ public class WeatherForecast {
     int offset;
     CurrentlyForecast currently;
 
+    HourlyForecast hourly;
+
+    DailyForecast daily;
+
+
     public static class CurrentlyForecast {
         long time;
         String summary;
@@ -141,9 +146,37 @@ public class WeatherForecast {
         }
     }
 
-    HourlyForecast hourly;
-
     public static class HourlyForecast {
+        String summary;
+        String icon;
+        List<Forecast> data;
+
+        public String getSummary() {
+            return summary;
+        }
+
+        public void setSummary(String summary) {
+            this.summary = summary;
+        }
+
+        public String getIcon() {
+            return icon;
+        }
+
+        public void setIcon(String icon) {
+            this.icon = icon;
+        }
+
+        public List<Forecast> getData() {
+            return data;
+        }
+
+        public void setData(List<Forecast> data) {
+            this.data = data;
+        }
+    }
+
+    public static class DailyForecast {
         String summary;
         String icon;
         List<Forecast> data;
@@ -348,5 +381,13 @@ public class WeatherForecast {
 
     public void setHourly(HourlyForecast hourly) {
         this.hourly = hourly;
+    }
+
+    public DailyForecast getDaily() {
+        return daily;
+    }
+
+    public void setDaily(DailyForecast daily) {
+        this.daily = daily;
     }
 }

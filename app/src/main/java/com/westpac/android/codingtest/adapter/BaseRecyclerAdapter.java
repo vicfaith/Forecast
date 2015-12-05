@@ -28,6 +28,7 @@ public abstract class BaseRecyclerAdapter<M, VH extends RecyclerView.ViewHolder>
     public void addAll(Collection<? extends M> collection) {
         if (collection != null) {
             mItems.addAll(collection);
+            notifyDataSetChanged();
         }
     }
 
@@ -37,7 +38,6 @@ public abstract class BaseRecyclerAdapter<M, VH extends RecyclerView.ViewHolder>
 
     public void clear() {
         mItems.clear();
-        notifyDataSetChanged();
     }
 
     public void remove(M object) {
