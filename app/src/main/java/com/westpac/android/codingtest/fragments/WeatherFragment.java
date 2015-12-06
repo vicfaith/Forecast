@@ -7,10 +7,14 @@ import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.Loader;
+import android.support.v4.widget.ContentLoadingProgressBar;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 
@@ -36,6 +40,7 @@ public class WeatherFragment extends Fragment implements LoaderManager.LoaderCal
     private static final String API_KEY = "59926891c212be1eb69cb852853cd850";
 
     private RecyclerView mRecyclerView;
+    private ContentLoadingProgressBar mProgressBar;
     private WeatherForecastAdapter mAdapter;
 
     protected GoogleApiClient mGoogleApiClient;
@@ -67,14 +72,17 @@ public class WeatherFragment extends Fragment implements LoaderManager.LoaderCal
     @Override
     public void onViewCreated(View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        setupRecyclerView(view);
+        setHasOptionsMenu(true);
+        setupViews(view);
     }
 
-    protected void setupRecyclerView(View rootView) {
+    protected void setupViews(View rootView) {
         mRecyclerView = (RecyclerView) rootView.findViewById(R.id.recylerView);
         mRecyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));
         mAdapter = new WeatherForecastAdapter(getActivity());
         mRecyclerView.setAdapter(mAdapter);
+
+        mProgressBar = (ContentLoadingProgressBar) rootView.findViewById(R.id.progressBar);
     }
 
     @Override
@@ -94,10 +102,26 @@ public class WeatherFragment extends Fragment implements LoaderManager.LoaderCal
     }
 
     @Override
+    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+        inflater.inflate(R.menu.menu_main, menu);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        int id = item.getItemId();
+
+        if (id == R.id.action_refresh) {
+            reloadForecast();
+        }
+
+        return super.onOptionsItemSelected(item);
+    }
+
+    @Override
     public void onConnected(Bundle bundle) {
         mLastLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
         if (mLastLocation != null) {
-            getForecast();
+            loadForecast();
         } else {
             // create Location request
             mLocationRequest = LocationRequest.create();
@@ -116,7 +140,7 @@ public class WeatherFragment extends Fragment implements LoaderManager.LoaderCal
     public void onLocationChanged(Location location) {
         if (mLastLocation == null) {
             mLastLocation = location;
-            getForecast();
+            loadForecast();
         } else {
             mLastLocation = location;
             LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient, this);
@@ -128,11 +152,20 @@ public class WeatherFragment extends Fragment implements LoaderManager.LoaderCal
 
     }
 
-    private void getForecast() {
+    private void loadForecast() {
         Bundle bundle = new Bundle();
         bundle.putParcelable("location", mLastLocation);
         getLoaderManager().initLoader(0, bundle, this);
         getLoaderManager().getLoader(0).startLoading();
+    }
+
+    private void reloadForecast() {
+        mAdapter.clear();
+        mAdapter.notifyDataSetChanged();
+
+        Bundle bundle = new Bundle();
+        bundle.putParcelable("location", mLastLocation);
+        getLoaderManager().restartLoader(0, bundle, this);
     }
 
     private void showForecast(WeatherForecast forecast) {
@@ -156,6 +189,7 @@ public class WeatherFragment extends Fragment implements LoaderManager.LoaderCal
 
     @Override
     public Loader<AsyncTaskResult<WeatherForecast>> onCreateLoader(int id, Bundle args) {
+        showProgressBar();
         Location location = args.getParcelable("location");
         String url = BASE_URL + API_KEY + "/" + location.getLatitude() + "," + location.getLongitude();
         Log.i(WeatherFragment.class.getSimpleName(), url);
@@ -164,6 +198,8 @@ public class WeatherFragment extends Fragment implements LoaderManager.LoaderCal
 
     @Override
     public void onLoadFinished(Loader<AsyncTaskResult<WeatherForecast>> loader, AsyncTaskResult<WeatherForecast> result) {
+        hideProgressBar();
+
         if (result.getError() != null) {
             showError((result.getError()));
         } else {
@@ -174,5 +210,13 @@ public class WeatherFragment extends Fragment implements LoaderManager.LoaderCal
     @Override
     public void onLoaderReset(Loader<AsyncTaskResult<WeatherForecast>> loader) {
 
+    }
+
+    private void showProgressBar() {
+        mProgressBar.show();
+    }
+
+    private void hideProgressBar() {
+        mProgressBar.hide();
     }
 }
