@@ -2,5 +2,6 @@
     <string name="app_name">Forecast.io</string>
     <string name="action_refresh">Refresh</string>
     <string name="permission_not_granted">Location permission was not granted.</string>
-    <string name="permission_locaation_rationale">Location permission is needed to use this app.</string>
+    <string name="permission_location_rationale">Location permission is needed to use this app.</string>
+    <string name="location_unavailable">Your current location is unavailable. Please enable your Location Service.</string>
 </resources>

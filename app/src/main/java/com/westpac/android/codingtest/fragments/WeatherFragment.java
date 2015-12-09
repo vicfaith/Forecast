@@ -2,9 +2,11 @@ package com.westpac.android.codingtest.fragments;
 
 import android.Manifest;
 import android.app.AlertDialog;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.design.widget.Snackbar;
@@ -25,6 +27,7 @@ import android.view.ViewGroup;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.LocationAvailability;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
@@ -45,7 +48,7 @@ public class WeatherFragment extends Fragment implements LoaderManager.LoaderCal
         GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, LocationListener, ActivityCompat.OnRequestPermissionsResultCallback {
     private static final String BASE_URL = "https://api.forecast.io/forecast/";
     private static final String API_KEY = "59926891c212be1eb69cb852853cd850";
-    private static final int REQUEST_LOCATION = 0;
+    private static final int REQUEST_LOCATION_PERMISSION = 0;
 
     private RecyclerView mRecyclerView;
     private ContentLoadingProgressBar mProgressBar;
@@ -66,27 +69,26 @@ public class WeatherFragment extends Fragment implements LoaderManager.LoaderCal
     }
 
     private void requestLocationPermission() {
-        if (ActivityCompat.shouldShowRequestPermissionRationale(getActivity(),
-                Manifest.permission.ACCESS_FINE_LOCATION)) {
-            Snackbar.make(getView(), getString(R.string.permission_locaation_rationale),
+        if (ActivityCompat.shouldShowRequestPermissionRationale(getActivity(), Manifest.permission.ACCESS_FINE_LOCATION)) {
+            Snackbar.make(getView(), getString(R.string.permission_location_rationale),
                     Snackbar.LENGTH_INDEFINITE)
                     .setAction("Okay", new View.OnClickListener() {
                         @Override
                         public void onClick(View view) {
-                            requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, REQUEST_LOCATION);
+                            requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, REQUEST_LOCATION_PERMISSION);
                         }
                     })
                     .show();
         } else {
             // Location permission has not been granted yet. Request it directly.
-            requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, REQUEST_LOCATION);
+            requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, REQUEST_LOCATION_PERMISSION);
         }
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
                                            @NonNull int[] grantResults) {
-        if (requestCode == REQUEST_LOCATION) {
+        if (requestCode == REQUEST_LOCATION_PERMISSION) {
             // Check if the only required permission has been granted
             if (grantResults.length == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 mGoogleApiClient = new GoogleApiClient.Builder(getActivity())
@@ -159,7 +161,6 @@ public class WeatherFragment extends Fragment implements LoaderManager.LoaderCal
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
-
         if (id == R.id.action_refresh) {
             reloadForecast();
         }
@@ -178,6 +179,25 @@ public class WeatherFragment extends Fragment implements LoaderManager.LoaderCal
             mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
             mLocationRequest.setInterval(1000 * 60); // 1min
             LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, this);
+        }
+
+        if (PermissionUtils.hasLocationPermission(getActivity())) {
+            requestLocationService();
+        }
+    }
+
+    private void requestLocationService() {
+        LocationAvailability locationAvailability = LocationServices.FusedLocationApi.getLocationAvailability(mGoogleApiClient);
+        if (!locationAvailability.isLocationAvailable()) {
+            Snackbar.make(getView(), getString(R.string.location_unavailable),
+                    Snackbar.LENGTH_INDEFINITE)
+                    .setAction("Okay", new View.OnClickListener() {
+                        @Override
+                        public void onClick(View view) {
+                            startActivity(new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS));
+                        }
+                    })
+                    .show();
         }
     }
 
@@ -218,7 +238,11 @@ public class WeatherFragment extends Fragment implements LoaderManager.LoaderCal
             bundle.putParcelable("location", mLastLocation);
             getLoaderManager().restartLoader(0, bundle, this);
         } else {
-            requestLocationPermission();
+            if (PermissionUtils.hasLocationPermission(getActivity())) {
+                requestLocationService();
+            } else {
+                requestLocationPermission();
+            }
         }
     }
 
@@ -251,7 +275,8 @@ public class WeatherFragment extends Fragment implements LoaderManager.LoaderCal
     }
 
     @Override
-    public void onLoadFinished(Loader<AsyncTaskResult<WeatherForecast>> loader, AsyncTaskResult<WeatherForecast> result) {
+    public void onLoadFinished
+            (Loader<AsyncTaskResult<WeatherForecast>> loader, AsyncTaskResult<WeatherForecast> result) {
         hideProgressBar();
 
         if (result.getError() != null) {
