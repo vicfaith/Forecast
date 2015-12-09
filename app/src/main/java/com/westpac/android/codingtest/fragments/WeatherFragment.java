@@ -1,9 +1,14 @@
 package com.westpac.android.codingtest.fragments;
 
+import android.Manifest;
 import android.app.AlertDialog;
+import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.design.widget.Snackbar;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.Loader;
@@ -28,6 +33,7 @@ import com.westpac.android.codingtest.adapter.WeatherForecastAdapter;
 import com.westpac.android.codingtest.loader.WeatherForecastLoader;
 import com.westpac.android.codingtest.models.AsyncTaskResult;
 import com.westpac.android.codingtest.models.WeatherForecast;
+import com.westpac.android.codingtest.utils.PermissionUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,9 +41,11 @@ import java.util.List;
 /**
  * Created by dkang on 3/12/15.
  */
-public class WeatherFragment extends Fragment implements LoaderManager.LoaderCallbacks<AsyncTaskResult<WeatherForecast>>, GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, LocationListener {
+public class WeatherFragment extends Fragment implements LoaderManager.LoaderCallbacks<AsyncTaskResult<WeatherForecast>>,
+        GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, LocationListener, ActivityCompat.OnRequestPermissionsResultCallback {
     private static final String BASE_URL = "https://api.forecast.io/forecast/";
     private static final String API_KEY = "59926891c212be1eb69cb852853cd850";
+    private static final int REQUEST_LOCATION = 0;
 
     private RecyclerView mRecyclerView;
     private ContentLoadingProgressBar mProgressBar;
@@ -55,12 +63,44 @@ public class WeatherFragment extends Fragment implements LoaderManager.LoaderCal
         super.onCreate(savedInstanceState);
 
         setRetainInstance(true);
+    }
 
-        mGoogleApiClient = new GoogleApiClient.Builder(getActivity())
-                .addApi(LocationServices.API)
-                .addConnectionCallbacks(this)
-                .addOnConnectionFailedListener(this)
-                .build();
+    private void requestLocationPermission() {
+        if (ActivityCompat.shouldShowRequestPermissionRationale(getActivity(),
+                Manifest.permission.ACCESS_FINE_LOCATION)) {
+            Snackbar.make(getView(), getString(R.string.permission_locaation_rationale),
+                    Snackbar.LENGTH_INDEFINITE)
+                    .setAction("Okay", new View.OnClickListener() {
+                        @Override
+                        public void onClick(View view) {
+                            requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, REQUEST_LOCATION);
+                        }
+                    })
+                    .show();
+        } else {
+            // Location permission has not been granted yet. Request it directly.
+            requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, REQUEST_LOCATION);
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
+                                           @NonNull int[] grantResults) {
+        if (requestCode == REQUEST_LOCATION) {
+            // Check if the only required permission has been granted
+            if (grantResults.length == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                mGoogleApiClient = new GoogleApiClient.Builder(getActivity())
+                        .addApi(LocationServices.API)
+                        .addConnectionCallbacks(this)
+                        .addOnConnectionFailedListener(this)
+                        .build();
+                mGoogleApiClient.connect();
+            } else {
+                Snackbar.make(getView(), getString(R.string.permission_not_granted), Snackbar.LENGTH_SHORT).show();
+            }
+        } else {
+            super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        }
     }
 
     @Nullable
@@ -74,6 +114,16 @@ public class WeatherFragment extends Fragment implements LoaderManager.LoaderCal
         super.onViewCreated(view, savedInstanceState);
         setHasOptionsMenu(true);
         setupViews(view);
+
+        if (!PermissionUtils.hasLocationPermission(getActivity())) {
+            requestLocationPermission();
+        } else {
+            mGoogleApiClient = new GoogleApiClient.Builder(getActivity())
+                    .addApi(LocationServices.API)
+                    .addConnectionCallbacks(this)
+                    .addOnConnectionFailedListener(this)
+                    .build();
+        }
     }
 
     protected void setupViews(View rootView) {
@@ -163,9 +213,13 @@ public class WeatherFragment extends Fragment implements LoaderManager.LoaderCal
         mAdapter.clear();
         mAdapter.notifyDataSetChanged();
 
-        Bundle bundle = new Bundle();
-        bundle.putParcelable("location", mLastLocation);
-        getLoaderManager().restartLoader(0, bundle, this);
+        if (mLastLocation != null) {
+            Bundle bundle = new Bundle();
+            bundle.putParcelable("location", mLastLocation);
+            getLoaderManager().restartLoader(0, bundle, this);
+        } else {
+            requestLocationPermission();
+        }
     }
 
     private void showForecast(WeatherForecast forecast) {
