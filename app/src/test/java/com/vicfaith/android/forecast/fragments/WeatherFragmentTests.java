@@ -32,6 +32,7 @@ public class WeatherFragmentTests {
 
     @Before
     public void setUp() {
+        // works only with 7.5.0
         ShadowGooglePlayServicesUtil.setIsGooglePlayServicesAvailable(ConnectionResult.SUCCESS);
         ActivityController<MainActivity> activityController = Robolectric.buildActivity(MainActivity.class).create();
         mActivity = activityController.get();
