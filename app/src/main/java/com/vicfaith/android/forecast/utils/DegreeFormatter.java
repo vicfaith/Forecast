@@ -5,7 +5,9 @@ package com.vicfaith.android.forecast.utils;
  */
 public class DegreeFormatter {
 
+    // convert fahrenheit  to celsius
     public static String getDegree(double temp) {
-        return Math.round(temp) + "\u00b0";
+        temp = ((temp - 32) * 5) / 9;
+        return Math.round(temp) + "\u00b0C";
     }
 }
